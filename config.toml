@@ -1,0 +1,13 @@
+#TOML config file
+title = "GoStarterPack"
+
+[log]
+type = "stderr"                                    # string [syslog|file]
+networkType = ""                                   # string [udp|tcp]
+host = ""                                          # string
+port= "514"                                        # string
+severity = "LOG_DEBUG"                             # string // From /usr/include/sys/syslog.h.These are the same up to LOG_FTP on Linux, BSD, and OS X.
+facility = "LOG_LOCAL4"                            # string // From /usr/include/sys/syslog.h.These are the same up to LOG_FTP on Linux, BSD, and OS X.
+filePath = ""                                      # string
+fileName = ""                                      # string
+debugMode = false
