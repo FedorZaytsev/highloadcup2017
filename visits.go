@@ -1,8 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"github.com/valyala/fasthttp"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,94 +15,84 @@ type Visit struct {
 	Mark      int `json:"mark"`
 }
 
-func newVisit(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		Log.Warnf("Cannot read body from request. Reason %s", err)
-		writeAnswer(w, http.StatusBadRequest, generateError("Cannot read body from request"))
-		return
-	}
+func newVisit(ctx *fasthttp.RequestCtx) {
+	data := ctx.PostBody()
 
 	if strings.Index(string(data), "\": null") != -1 {
 		Log.Infof("null param")
-		writeAnswer(w, http.StatusBadRequest, "")
+		writeAnswer(ctx, http.StatusBadRequest, "")
 		return
 	}
 
 	var body Visit
-	err = json.Unmarshal(data, &body)
+	err := body.UnmarshalJSON(data)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
-		writeAnswer(w, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
+		writeAnswer(ctx, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
 		return
 	}
 
 	err = DB.NewVisit(&body)
 	if err != nil {
 		Log.Errorf("Cannot set id %d. Reason %s", body.Id, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot set id"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot set id"))
 		return
 	}
 
-	writeAnswer(w, http.StatusOK, "{}")
+	writeAnswer(ctx, http.StatusOK, "{}")
 }
 
-func getVisit(w http.ResponseWriter, r *http.Request, id int) {
+func getVisit(ctx *fasthttp.RequestCtx, id int) {
 	visit, err := DB.GetVisit(id)
 	if err == NotFound {
 		Log.Warnf("Not found")
-		writeAnswer(w, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, "")
 		return
 	}
 	if err != nil {
 		Log.Errorf("Cannot get id %s. Reason %s", id, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("cannot get id"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("cannot get id"))
 		return
 	}
 
-	result, err := json.Marshal(visit)
+	result, err := visit.MarshalJSON()
 	if err != nil {
 		Log.Errorf("Cannot marshal visit %#v. Reason %s", visit, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot marshal visit"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot marshal visit"))
 		return
 	}
 
-	writeAnswer(w, http.StatusOK, string(result))
+	writeAnswer(ctx, http.StatusOK, string(result))
 }
 
-func updateVisit(w http.ResponseWriter, r *http.Request, id int) {
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		Log.Warnf("Cannot read body from request. Reason %s", err)
-		writeAnswer(w, http.StatusBadRequest, generateError("Cannot read body from request"))
-		return
-	}
+func updateVisit(ctx *fasthttp.RequestCtx, id int) {
+	data := ctx.PostBody()
 
 	if strings.Index(string(data), "\": null") != -1 {
 		Log.Infof("null param")
-		writeAnswer(w, http.StatusBadRequest, "")
+		writeAnswer(ctx, http.StatusBadRequest, "")
 		return
 	}
 
 	visit, err := DB.GetVisit(id)
 	if err == NotFound {
 		Log.Infof("Not found")
-		writeAnswer(w, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, "")
 		return
 	}
 	if err != nil {
 		Log.Errorf("Cannot get visit with id %d. Reason %s", id, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot get visit"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot get visit"))
 		return
 	}
 
 	oldUser := visit.User
 	oldLocation := visit.Location
 
-	err = json.Unmarshal(data, &visit)
+	err = visit.UnmarshalJSON(data)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
-		writeAnswer(w, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
+		writeAnswer(ctx, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
 		return
 	}
 
@@ -112,7 +101,7 @@ func updateVisit(w http.ResponseWriter, r *http.Request, id int) {
 		usrOld, err := DB.GetUser(oldUser)
 		if err != nil {
 			Log.Errorf("Cannot get user %d. Reason %s", oldUser, err)
-			writeAnswer(w, http.StatusBadRequest, "")
+			writeAnswer(ctx, http.StatusBadRequest, "")
 			return
 		}
 		usrOld.Visits.Remove(visit.Id)
@@ -120,7 +109,7 @@ func updateVisit(w http.ResponseWriter, r *http.Request, id int) {
 		usr, err := DB.GetUser(visit.User)
 		if err != nil {
 			Log.Errorf("Cannot get user %d. Reason %s", visit.User, err)
-			writeAnswer(w, http.StatusBadRequest, "")
+			writeAnswer(ctx, http.StatusBadRequest, "")
 			return
 		}
 		usr.Visits.Add(visit.Id)
@@ -131,7 +120,7 @@ func updateVisit(w http.ResponseWriter, r *http.Request, id int) {
 		locOld, err := DB.GetLocation(oldLocation)
 		if err != nil {
 			Log.Errorf("Cannot get location %d. Reason %s", oldLocation, err)
-			writeAnswer(w, http.StatusBadRequest, "")
+			writeAnswer(ctx, http.StatusBadRequest, "")
 			return
 		}
 		locOld.Visits.Remove(visit.Id)
@@ -139,7 +128,7 @@ func updateVisit(w http.ResponseWriter, r *http.Request, id int) {
 		loc, err := DB.GetLocation(visit.Location)
 		if err != nil {
 			Log.Errorf("Cannot get location %d. Reason %s", visit.Location, err)
-			writeAnswer(w, http.StatusBadRequest, "")
+			writeAnswer(ctx, http.StatusBadRequest, "")
 			return
 		}
 		loc.Visits.Add(visit.Id)
@@ -148,25 +137,24 @@ func updateVisit(w http.ResponseWriter, r *http.Request, id int) {
 	err = DB.UpdateVisit(visit, id)
 	if err != nil {
 		Log.Errorf("Cannot update visit. Reason %s", err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot update visit"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot update visit"))
 		return
 	}
 
-	writeAnswer(w, http.StatusOK, "{}")
+	writeAnswer(ctx, http.StatusOK, "{}")
 }
 
-func processVisit(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/json; charset=UTF-8")
-	path := strings.Split(r.URL.Path, "/")
+func processVisit(ctx *fasthttp.RequestCtx) {
+	path := strings.Split(string(ctx.Path()), "/")
 	id, err := strconv.Atoi(path[2])
 	if err != nil {
 		Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
-		writeAnswer(w, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, "")
 		return
 	}
-	if r.Method == "GET" {
-		getVisit(w, r, id)
+	if string(ctx.Method()) == "GET" {
+		getVisit(ctx, id)
 	} else {
-		updateVisit(w, r, id)
+		updateVisit(ctx, id)
 	}
 }

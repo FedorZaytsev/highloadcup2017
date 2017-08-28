@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/ogier/pflag"
+	//"github.com/pkg/profile"
+	"github.com/valyala/fasthttp"
 )
 
 var (
@@ -47,28 +48,61 @@ func init() {
 	ts = time.Now()
 }
 
-func writeAnswer(w http.ResponseWriter, code int, body string) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.Header().Set("Cache-Control", "application/json")
-	w.WriteHeader(code)
-	fmt.Fprintf(w, "%s", body)
+func writeAnswer(ctx *fasthttp.RequestCtx, code int, body string) {
+	ctx.SetContentType("application/json; charset=UTF-8")
+	ctx.SetStatusCode(code)
+	fmt.Fprintf(ctx, body)
 }
 
 func generateError(data string) string {
 	return fmt.Sprintf("{\"error\": \"%s\"}", data)
 }
 
+func requestHandler(ctx *fasthttp.RequestCtx) {
+	path := ctx.Path()
+	Log.Infof("PATH %s", string(path))
+	switch string(path[:2]) {
+	case "/u":
+		if path[len(path)-1] == 'w' {
+			newUser(ctx)
+		} else {
+			processUser(ctx)
+		}
+	case "/l":
+		if path[len(path)-1] == 'w' {
+			newLocation(ctx)
+		} else {
+			processLocation(ctx)
+		}
+	case "/v":
+		if path[len(path)-1] == 'w' {
+			newVisit(ctx)
+		} else {
+			processVisit(ctx)
+		}
+	default:
+		ctx.Error("Unsupported path", fasthttp.StatusNotFound)
+	}
+}
+
 func main() {
 	Log.Infof("Started\n")
+	//defer profile.Start(profile.ProfilePath(".")).Stop()
 
 	go loadToServer()
-	http.HandleFunc("/users/new", newUser)
+
+	err := fasthttp.ListenAndServe(":8080", requestHandler)
+	if err != nil {
+		Log.Errorf("ListAndServe error: %s", err)
+	}
+
+	/*http.HandleFunc("/users/new", newUser)
 	http.HandleFunc("/users/", processUser)
 	http.HandleFunc("/locations/new", newLocation)
 	http.HandleFunc("/locations/", processLocation)
 	http.HandleFunc("/visits/new", newVisit)
 	http.HandleFunc("/visits/", processVisit)
-	http.ListenAndServe(":80", nil)
+	http.ListenAndServe(":80", nil)*/
 
 	//uncomment if it is a demon
 	//sgnl := make(chan os.Signal, 1)

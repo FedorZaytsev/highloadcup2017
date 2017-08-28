@@ -9,9 +9,7 @@ type Array struct {
 }
 
 func (a *Array) Add(el int) {
-	Log.Infof("ADD %v", a.Lst)
 	a.Lst = append(a.Lst, el)
-	Log.Infof("ADD AFTER %v", a.Lst)
 }
 
 func (a Array) ForEach(f func(int) bool) {

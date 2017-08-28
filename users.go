@@ -1,8 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"github.com/valyala/fasthttp"
 	"net/http"
 	"strconv"
 	"strings"
@@ -24,6 +23,10 @@ type UserVisits struct {
 	Place     string `json:"place"`
 }
 
+type UserVisitsArray struct {
+	Visits []UserVisits `json:"visits"`
+}
+
 type UserVisitsSorter struct {
 	Data []UserVisits
 }
@@ -40,28 +43,22 @@ func (s UserVisitsSorter) Less(i, j int) bool {
 	return s.Data[i].VisitedAt < s.Data[j].VisitedAt
 }
 
-func newUser(w http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		Log.Warnf("Cannot read body from request. Reason %s", err)
-		writeAnswer(w, http.StatusBadRequest, generateError("Cannot read body from request"))
-		return
-	}
+func newUser(ctx *fasthttp.RequestCtx) {
+	data := ctx.PostBody()
 
 	if strings.Index(string(data), "\": null") != -1 {
 		Log.Infof("null param")
-		writeAnswer(w, http.StatusBadRequest, "")
+		writeAnswer(ctx, http.StatusBadRequest, "")
 		return
 	}
 
 	body := User{
 		Visits: NewArray(),
 	}
-	Log.Infof("Visits %p", body.Visits)
-	err = json.Unmarshal(data, &body)
+	err := body.UnmarshalJSON(data)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
-		writeAnswer(w, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
+		writeAnswer(ctx, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
 		return
 	}
 	Log.Infof("Visits after %p", body.Visits)
@@ -69,130 +66,125 @@ func newUser(w http.ResponseWriter, r *http.Request) {
 	err = DB.NewUser(&body)
 	if err != nil {
 		Log.Errorf("Cannot set id %d. Reason %s", body.Id, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot set id"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot set id"))
 		return
 	}
 
-	writeAnswer(w, http.StatusOK, "{}")
+	writeAnswer(ctx, http.StatusOK, "{}")
 }
 
-func getUserVisits(w http.ResponseWriter, r *http.Request, id int) {
-	filters := r.URL.Query()
+func getUserVisits(ctx *fasthttp.RequestCtx, id int) {
+	filters := ctx.QueryArgs()
 	Log.Infof("Getting user %s visits with filters %#v", id, filters)
 
 	vals, err := DB.GetVisitsFilter(id, filters)
 	switch err {
 	case NotFound:
 		Log.Infof("Not found")
-		writeAnswer(w, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, "")
 		return
 	case CannotParse:
 		Log.Infof("Cannot parse")
-		writeAnswer(w, http.StatusBadRequest, "")
+		writeAnswer(ctx, http.StatusBadRequest, "")
 		return
 	case nil:
 		break
 	default:
 		Log.Errorf("Error while getting user visits. Reason %s", err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Error while getting user visits"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Error while getting user visits"))
 		return
 	}
 
-	result, err := json.Marshal(struct {
-		Visits []UserVisits `json:"visits"`
-	}{
+	visitsArray := UserVisitsArray{
 		Visits: vals,
-	})
+	}
+
+	result, err := visitsArray.MarshalJSON()
 	if err != nil {
 		Log.Errorf("Cannot marshal answer. Reason %s", err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot marshal answer"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot marshal answer"))
 		return
 	}
 
-	writeAnswer(w, http.StatusOK, string(result))
+	writeAnswer(ctx, http.StatusOK, string(result))
 }
 
-func getUser(w http.ResponseWriter, r *http.Request, id int) {
+func getUser(ctx *fasthttp.RequestCtx, id int) {
 	result, err := DB.GetUser(id)
 	if err == NotFound {
 		Log.Infof("Not found")
-		writeAnswer(w, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, "")
 		return
 	}
 	if err != nil {
 		Log.Errorf("Cannot get id %d. Reason %s", id, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("cannot get id"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("cannot get id"))
 		return
 	}
 
-	answer, err := json.Marshal(result)
+	answer, err := result.MarshalJSON()
 	if err != nil {
 		Log.Errorf("Cannot marshal user %d. Reason %s", id, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot marshal user"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot marshal user"))
 		return
 	}
 
-	writeAnswer(w, http.StatusOK, string(answer))
+	writeAnswer(ctx, http.StatusOK, string(answer))
 }
 
-func updateUser(w http.ResponseWriter, r *http.Request, id int) {
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		Log.Warnf("Cannot read body from request. Reason %s", err)
-		writeAnswer(w, http.StatusBadRequest, generateError("Cannot read body from request"))
-		return
-	}
+func updateUser(ctx *fasthttp.RequestCtx, id int) {
+	data := ctx.PostBody()
 
 	if strings.Index(string(data), "\": null") != -1 {
 		Log.Infof("null param")
-		writeAnswer(w, http.StatusBadRequest, "")
+		writeAnswer(ctx, http.StatusBadRequest, "")
 		return
 	}
 
 	user, err := DB.GetUser(id)
 	if err == NotFound {
 		Log.Infof("Not found")
-		writeAnswer(w, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, "")
 		return
 	}
 	if err != nil {
 		Log.Errorf("Cannot get user with id %d. Reason %s", id, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot get user"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot get user"))
 		return
 	}
 
-	err = json.Unmarshal(data, &user)
+	err = user.UnmarshalJSON(data)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
-		writeAnswer(w, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
+		writeAnswer(ctx, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
 		return
 	}
 
 	err = DB.UpdateUser(user, id)
 	if err != nil {
 		Log.Errorf("Cannot update user. Reason %s", err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot update user"))
+		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot update user"))
 		return
 	}
 
-	writeAnswer(w, http.StatusOK, "{}")
+	writeAnswer(ctx, http.StatusOK, "{}")
 }
 
-func processUser(w http.ResponseWriter, r *http.Request) {
-	path := strings.Split(r.URL.Path, "/")
+func processUser(ctx *fasthttp.RequestCtx) {
+	path := strings.Split(string(ctx.Path()), "/")
 	id, err := strconv.Atoi(path[2])
 	if err != nil {
 		Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
-		writeAnswer(w, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, "")
 		return
 	}
 	if path[len(path)-1] == "visits" {
-		getUserVisits(w, r, id)
+		getUserVisits(ctx, id)
 		return
 	}
-	if r.Method == "GET" {
-		getUser(w, r, id)
+	if string(ctx.Method()) == "GET" {
+		getUser(ctx, id)
 	} else {
-		updateUser(w, r, id)
+		updateUser(ctx, id)
 	}
 }

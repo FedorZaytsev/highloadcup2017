@@ -15,7 +15,7 @@ RUN wget https://storage.googleapis.com/golang/go1.9.linux-amd64.tar.gz &&\
 ENV PATH=${PATH}:/usr/local/go/bin GOROOT=/usr/local/go GOPATH=/root/go
 
 # Копируем наш исходный main.go внутрь контейнера, в папку go/src/dumb
-ADD data.zip /tmp/data/data.zip
+ADD data_FULL.zip /tmp/data/data.zip
 ADD . /  go/src/dumb/
 #ADD my.cnf /etc/mysql/my.cnf 
 
@@ -25,7 +25,7 @@ WORKDIR /root/go/src/dumb
 RUN go build
 
 # Открываем 80-й порт наружу
-EXPOSE 80
+EXPOSE 8080
 
 CMD ./dumb
 

@@ -99,7 +99,7 @@ func load() error {
 
 	for _, file := range reader.File {
 		if strings.HasPrefix(file.Name, "locations") || strings.HasPrefix(file.Name, "users") || strings.HasPrefix(file.Name, "visits") {
-			Log.Infof("Processing file %s", file.Name)
+			Log.Errorf("Processing file %s", file.Name)
 
 			processFile(file)
 		}
@@ -139,5 +139,5 @@ func loadToServer() {
 	if err != nil {
 		Log.Errorf("Cannot load startup data. Reason %s", err)
 	}
-	Log.Errorln("ALL LOADED")
+	Log.Errorln("ALL LOADED FASTHTTP")
 }

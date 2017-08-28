@@ -8,6 +8,30 @@
   version = "v1.3"
 
 [[projects]]
+  name = "github.com/klauspost/compress"
+  packages = ["flate","gzip","zlib"]
+  revision = "6c8db69c4b49dd4df1fff66996cf556176d0b9bf"
+  version = "v1.2.1"
+
+[[projects]]
+  name = "github.com/klauspost/cpuid"
+  packages = ["."]
+  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/klauspost/crc32"
+  packages = ["."]
+  revision = "cb6bfca970f6908083f26f39a79009d608efd5cd"
+  version = "v1.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mailru/easyjson"
+  packages = [".","buffer","jlexer","jwriter"]
+  revision = "3b3bbef4e2d9a6f24d7ee73a894afbc064f0e057"
+
+[[projects]]
   name = "github.com/naoina/go-stringutil"
   packages = ["."]
   revision = "6b638e95a32d0c1131db0e7fe83775cbea4a0d0b"
@@ -38,6 +62,12 @@
   version = "1.0.2"
 
 [[projects]]
+  name = "github.com/valyala/fasthttp"
+  packages = [".","fasthttputil"]
+  revision = "d42167fd04f636e20b005e9934159e95454233c7"
+  version = "v20160617"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
@@ -46,6 +76,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "32737002ecebd68179a8592f390e9b3c5d5c6119c89cdd972bad43707fc4df90"
+  inputs-digest = "faa54f776886abddfc71a07f171eea9bac3bce391484f1aa0f23db8ef3aa2f41"
   solver-name = "gps-cdcl"
   solver-version = 1
