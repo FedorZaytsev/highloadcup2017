@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ogier/pflag"
-	"github.com/pkg/profile"
 )
 
 var (
@@ -60,7 +59,6 @@ func generateError(data string) string {
 }
 
 func main() {
-	defer profile.Start().Stop()
 	Log.Infof("Started\n")
 
 	go loadToServer()
@@ -70,7 +68,7 @@ func main() {
 	http.HandleFunc("/locations/", processLocation)
 	http.HandleFunc("/visits/new", newVisit)
 	http.HandleFunc("/visits/", processVisit)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":80", nil)
 
 	//uncomment if it is a demon
 	//sgnl := make(chan os.Signal, 1)
