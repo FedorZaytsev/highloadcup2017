@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"github.com/go-redis/redis"
 )
 
 type Visit struct {
@@ -26,6 +24,12 @@ func newVisit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if strings.Index(string(data), "\": null") != -1 {
+		Log.Infof("null param")
+		writeAnswer(w, http.StatusBadRequest, "")
+		return
+	}
+
 	var body Visit
 	err = json.Unmarshal(data, &body)
 	if err != nil {
@@ -34,15 +38,7 @@ func newVisit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := strconv.Itoa(body.Id)
-	err = RedisClientVstCon.SAdd(strconv.Itoa(body.User), id).Err()
-	if err != nil {
-		Log.Errorf("Cannot add user to visit entry. Reason %s", err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot add user to visit entry"))
-		return
-	}
-
-	err = RedisClientVst.Set(id, data, 0).Err()
+	err = DB.NewVisit(&body)
 	if err != nil {
 		Log.Errorf("Cannot set id %d. Reason %s", body.Id, err)
 		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot set id"))
@@ -52,11 +48,9 @@ func newVisit(w http.ResponseWriter, r *http.Request) {
 	writeAnswer(w, http.StatusOK, "{}")
 }
 
-func getVisit(w http.ResponseWriter, r *http.Request, id string) {
-	Log.Infof("Getting visit with id %s", id)
-
-	result, err := RedisClientVst.Get(id).Result()
-	if err == redis.Nil {
+func getVisit(w http.ResponseWriter, r *http.Request, id int) {
+	visit, err := DB.GetVisit(id)
+	if err == NotFound {
 		Log.Warnf("Not found")
 		writeAnswer(w, http.StatusNotFound, "")
 		return
@@ -67,32 +61,17 @@ func getVisit(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 
-	writeAnswer(w, http.StatusOK, result)
+	result, err := json.Marshal(visit)
+	if err != nil {
+		Log.Errorf("Cannot marshal visit %#v. Reason %s", visit, err)
+		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot marshal visit"))
+		return
+	}
+
+	writeAnswer(w, http.StatusOK, string(result))
 }
 
-func updateVisit(w http.ResponseWriter, r *http.Request, id string) {
-	Log.Infof("Updaing visit with id %s", id)
-
-	result, err := RedisClientVst.Get(id).Result()
-	if err == redis.Nil {
-		Log.Warnf("Not found")
-		writeAnswer(w, http.StatusNotFound, "")
-		return
-	}
-	if err != nil {
-		Log.Errorf("Cannot get id %s. Reason %s", id, err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("cannot get id"))
-		return
-	}
-
-	var visit Visit
-	err = json.Unmarshal([]byte(result), &visit)
-	if err != nil {
-		Log.Warnf("Cannot parse JSON from redis. Reason %s", err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot parse JSON from redis"))
-		return
-	}
-
+func updateVisit(w http.ResponseWriter, r *http.Request, id int) {
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		Log.Warnf("Cannot read body from request. Reason %s", err)
@@ -100,59 +79,91 @@ func updateVisit(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 
-	var newVisit Visit
-	err = json.Unmarshal(data, &newVisit)
+	if strings.Index(string(data), "\": null") != -1 {
+		Log.Infof("null param")
+		writeAnswer(w, http.StatusBadRequest, "")
+		return
+	}
+
+	visit, err := DB.GetVisit(id)
+	if err == NotFound {
+		Log.Infof("Not found")
+		writeAnswer(w, http.StatusNotFound, "")
+		return
+	}
+	if err != nil {
+		Log.Errorf("Cannot get visit with id %d. Reason %s", id, err)
+		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot get visit"))
+		return
+	}
+
+	oldUser := visit.User
+	oldLocation := visit.Location
+
+	err = json.Unmarshal(data, &visit)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
 		writeAnswer(w, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
 		return
 	}
 
-	if newVisit.Location != 0 {
-		visit.Location = newVisit.Location
-	}
-	if newVisit.Mark != 0 {
-		visit.Mark = newVisit.Mark
-	}
-	if newVisit.User != 0 {
-		err = RedisClientVstCon.SRem(strconv.Itoa(visit.User), strconv.Itoa(visit.Id)).Err()
+	//UPDATE USER
+	if visit.User != oldUser {
+		usrOld, err := DB.GetUser(oldUser)
 		if err != nil {
-			Log.Errorf("Cannot remove old user %d from visit with id %d. Reason %s", visit.User, visit.Id, err)
-			writeAnswer(w, http.StatusInternalServerError, generateError("Cannot remove old user"))
+			Log.Errorf("Cannot get user %d. Reason %s", oldUser, err)
+			writeAnswer(w, http.StatusBadRequest, "")
 			return
 		}
-		err = RedisClientVstCon.SAdd(strconv.Itoa(newVisit.User), strconv.Itoa(visit.Id)).Err()
+		usrOld.Visits.Remove(visit.Id)
+
+		usr, err := DB.GetUser(visit.User)
 		if err != nil {
-			Log.Errorf("Cannot add new user %d for visit with id %d. Reason %s", newVisit.User, visit.Id, err)
-			writeAnswer(w, http.StatusInternalServerError, generateError("Cannot add new user"))
+			Log.Errorf("Cannot get user %d. Reason %s", visit.User, err)
+			writeAnswer(w, http.StatusBadRequest, "")
 			return
 		}
-		visit.User = newVisit.User
-	}
-	if newVisit.VisitedAt != 0 {
-		visit.VisitedAt = newVisit.VisitedAt
+		usr.Visits.Add(visit.Id)
 	}
 
-	resultRedis, err := json.Marshal(visit)
+	//UPDATE LOCATION
+	if visit.Location != oldLocation {
+		locOld, err := DB.GetLocation(oldLocation)
+		if err != nil {
+			Log.Errorf("Cannot get location %d. Reason %s", oldLocation, err)
+			writeAnswer(w, http.StatusBadRequest, "")
+			return
+		}
+		locOld.Visits.Remove(visit.Id)
+
+		loc, err := DB.GetLocation(visit.Location)
+		if err != nil {
+			Log.Errorf("Cannot get location %d. Reason %s", visit.Location, err)
+			writeAnswer(w, http.StatusBadRequest, "")
+			return
+		}
+		loc.Visits.Add(visit.Id)
+	}
+
+	err = DB.UpdateVisit(visit, id)
 	if err != nil {
-		Log.Errorf("Cannot marshal json. Reason %s", err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot marshal json"))
+		Log.Errorf("Cannot update visit. Reason %s", err)
+		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot update visit"))
 		return
 	}
 
-	err = RedisClientVst.Set(id, resultRedis, 0).Err()
-	if err != nil {
-		Log.Errorf("Cannot set redis value. Reason %s", err)
-		writeAnswer(w, http.StatusInternalServerError, generateError("Cannot set redis value"))
-		return
-	}
-
-	writeAnswer(w, http.StatusOK, "")
+	writeAnswer(w, http.StatusOK, "{}")
 }
 
 func processVisit(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json; charset=UTF-8")
 	path := strings.Split(r.URL.Path, "/")
-	id := path[2]
+	id, err := strconv.Atoi(path[2])
+	if err != nil {
+		Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
+		writeAnswer(w, http.StatusNotFound, "")
+		return
+	}
 	if r.Method == "GET" {
 		getVisit(w, r, id)
 	} else {

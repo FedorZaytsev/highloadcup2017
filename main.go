@@ -4,18 +4,17 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
-	"github.com/go-redis/redis"
 	"github.com/ogier/pflag"
+	"github.com/pkg/profile"
 )
 
 var (
-	Version           string
-	BuildTime         string
-	RedisClientUsr    *redis.Client
-	RedisClientLoc    *redis.Client
-	RedisClientVst    *redis.Client
-	RedisClientVstCon *redis.Client
+	Version   string
+	BuildTime string
+	ts        time.Time
+	DB        *Database
 )
 
 func init() {
@@ -41,55 +40,19 @@ func init() {
 		os.Exit(1)
 	}
 
-	RedisClientUsr = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
-	})
-	err = RedisClientUsr.Ping().Err()
+	DB, err = DatabaseInit()
 	if err != nil {
 		fmt.Println("Error", err)
 		os.Exit(1)
 	}
-
-	RedisClientLoc = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       1,
-	})
-	err = RedisClientLoc.Ping().Err()
-	if err != nil {
-		fmt.Println("Error", err)
-		os.Exit(1)
-	}
-
-	RedisClientVst = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       2,
-	})
-	err = RedisClientVst.Ping().Err()
-	if err != nil {
-		fmt.Println("Error", err)
-		os.Exit(1)
-	}
-
-	RedisClientVstCon = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       3,
-	})
-	err = RedisClientVstCon.Ping().Err()
-	if err != nil {
-		fmt.Println("Error", err)
-		os.Exit(1)
-	}
+	ts = time.Now()
 }
 
 func writeAnswer(w http.ResponseWriter, code int, body string) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.Header().Set("Cache-Control", "application/json")
 	w.WriteHeader(code)
-	fmt.Fprintf(w, body)
+	fmt.Fprintf(w, "%s", body)
 }
 
 func generateError(data string) string {
@@ -97,8 +60,10 @@ func generateError(data string) string {
 }
 
 func main() {
+	defer profile.Start().Stop()
 	Log.Infof("Started\n")
 
+	go loadToServer()
 	http.HandleFunc("/users/new", newUser)
 	http.HandleFunc("/users/", processUser)
 	http.HandleFunc("/locations/new", newLocation)

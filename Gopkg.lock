@@ -2,10 +2,10 @@
 
 
 [[projects]]
-  name = "github.com/go-redis/redis"
-  packages = [".","internal","internal/consistenthash","internal/hashtag","internal/pool","internal/proto"]
-  revision = "89515eebd1b5761486abd32d9e84a8f55dda7740"
-  version = "v6.5.6"
+  name = "github.com/go-sql-driver/mysql"
+  packages = ["."]
+  revision = "a0583e0143b1624142adab07e0e97fe106d99561"
+  version = "v1.3"
 
 [[projects]]
   name = "github.com/naoina/go-stringutil"
@@ -26,6 +26,12 @@
   version = "v0.0.1"
 
 [[projects]]
+  name = "github.com/pkg/profile"
+  packages = ["."]
+  revision = "5b67d428864e92711fcbd2f8629456121a56d91f"
+  version = "v1.2.1"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = [".","hooks/syslog"]
   revision = "a3f95b5c423586578a4e099b11a46c2479628cac"
@@ -40,6 +46,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2415844cd7fe8cfd2c4242b2a7c62aec5d45206025fd489b503f000fbb872aeb"
+  inputs-digest = "32737002ecebd68179a8592f390e9b3c5d5c6119c89cdd972bad43707fc4df90"
   solver-name = "gps-cdcl"
   solver-version = 1
