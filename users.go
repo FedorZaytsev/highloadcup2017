@@ -43,14 +43,15 @@ func (s UserVisitsSorter) Less(i, j int) bool {
 	return s.Data[i].VisitedAt < s.Data[j].VisitedAt
 }
 
+func NewUser(id int) *User {
+	return &User{
+		Id:     id,
+		Visits: NewArray(),
+	}
+}
+
 func newUser(ctx *fasthttp.RequestCtx) {
 	data := ctx.PostBody()
-
-	if strings.Index(string(data), "\": null") != -1 {
-		Log.Infof("null param")
-		writeAnswer(ctx, http.StatusBadRequest, "")
-		return
-	}
 
 	body := User{
 		Visits: NewArray(),
@@ -58,7 +59,7 @@ func newUser(ctx *fasthttp.RequestCtx) {
 	err := body.UnmarshalJSON(data)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
-		writeAnswer(ctx, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
+		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
 	Log.Infof("Visits after %p", body.Visits)
@@ -70,7 +71,7 @@ func newUser(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	writeAnswer(ctx, http.StatusOK, "{}")
+	writeAnswer(ctx, http.StatusOK, ANSWER_OK)
 }
 
 func getUserVisits(ctx *fasthttp.RequestCtx, id int) {
@@ -81,11 +82,11 @@ func getUserVisits(ctx *fasthttp.RequestCtx, id int) {
 	switch err {
 	case NotFound:
 		Log.Infof("Not found")
-		writeAnswer(ctx, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	case CannotParse:
 		Log.Infof("Cannot parse")
-		writeAnswer(ctx, http.StatusBadRequest, "")
+		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	case nil:
 		break
@@ -106,14 +107,14 @@ func getUserVisits(ctx *fasthttp.RequestCtx, id int) {
 		return
 	}
 
-	writeAnswer(ctx, http.StatusOK, string(result))
+	writeAnswer(ctx, http.StatusOK, result)
 }
 
 func getUser(ctx *fasthttp.RequestCtx, id int) {
 	result, err := DB.GetUser(id)
 	if err == NotFound {
 		Log.Infof("Not found")
-		writeAnswer(ctx, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
 	if err != nil {
@@ -129,22 +130,16 @@ func getUser(ctx *fasthttp.RequestCtx, id int) {
 		return
 	}
 
-	writeAnswer(ctx, http.StatusOK, string(answer))
+	writeAnswer(ctx, http.StatusOK, answer)
 }
 
 func updateUser(ctx *fasthttp.RequestCtx, id int) {
 	data := ctx.PostBody()
 
-	if strings.Index(string(data), "\": null") != -1 {
-		Log.Infof("null param")
-		writeAnswer(ctx, http.StatusBadRequest, "")
-		return
-	}
-
 	user, err := DB.GetUser(id)
 	if err == NotFound {
 		Log.Infof("Not found")
-		writeAnswer(ctx, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
 	if err != nil {
@@ -156,7 +151,7 @@ func updateUser(ctx *fasthttp.RequestCtx, id int) {
 	err = user.UnmarshalJSON(data)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
-		writeAnswer(ctx, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
+		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
 
@@ -167,7 +162,7 @@ func updateUser(ctx *fasthttp.RequestCtx, id int) {
 		return
 	}
 
-	writeAnswer(ctx, http.StatusOK, "{}")
+	writeAnswer(ctx, http.StatusOK, ANSWER_OK)
 }
 
 func processUser(ctx *fasthttp.RequestCtx) {
@@ -175,7 +170,7 @@ func processUser(ctx *fasthttp.RequestCtx) {
 	id, err := strconv.Atoi(path[2])
 	if err != nil {
 		Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
-		writeAnswer(ctx, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
 	if path[len(path)-1] == "visits" {

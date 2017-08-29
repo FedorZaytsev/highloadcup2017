@@ -2,48 +2,57 @@ package main
 
 import (
 	"archive/zip"
-	"encoding/json"
 	"fmt"
+	easyjson "github.com/mailru/easyjson"
 	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
 )
 
-func sendRequest(name, data string) error {
+type JsonFileUsers struct {
+	Users []*User `json:"users"`
+}
+
+type JsonFileLocations struct {
+	Locations []*Location `json:"locations"`
+}
+
+type JsonFileVisits struct {
+	Visits []*Visit `json:"visits"`
+}
+
+/*
+func sendRequest(name string, data []byte) error {
 	var err error
 	switch name {
 	case "users":
-		user := User{
-			Visits: NewArray(),
-		}
-		err = json.Unmarshal([]byte(data), &user)
+		user := NewUser(0)
+		err = user.UnmarshalJSON(data)
 		if err != nil {
 			return err
 		}
-		err = DB.NewUser(&user)
+		err = DB.NewUser(user)
 		if err != nil {
 			return err
 		}
 	case "locations":
-		loc := Location{
-			Visits: NewArray(),
-		}
-		err = json.Unmarshal([]byte(data), &loc)
+		loc := NewLocation(0)
+		err = loc.UnmarshalJSON(data)
 		if err != nil {
 			return err
 		}
-		err = DB.NewLocation(&loc)
+		err = DB.NewLocation(loc)
 		if err != nil {
 			return err
 		}
 	case "visits":
-		var visit Visit
-		err = json.Unmarshal([]byte(data), &visit)
+		visit := NewVisit(0)
+		err = visit.UnmarshalJSON(data)
 		if err != nil {
 			return err
 		}
-		err = DB.NewVisit(&visit)
+		err = DB.NewVisit(visit)
 		if err != nil {
 			return err
 		}
@@ -82,11 +91,80 @@ func processFile(file *zip.File) {
 				Log.Errorf("Cannot marshal raw message. Reason %s", err)
 				return
 			}
-			err = sendRequest(k, string(data))
+			err = sendRequest(k, data)
 			if err != nil {
 				Log.Errorf("Cannot send request. Reason %s", err)
 				return
 			}
+		}
+	}
+}*/
+
+func loadUsers(file *zip.File) {
+	fileReader, err := file.Open()
+	if err != nil {
+		Log.Errorf("Cannot open file %s. Reason %s", file.Name, err)
+		return
+	}
+	defer fileReader.Close()
+
+	data := JsonFileUsers{}
+	err = easyjson.UnmarshalFromReader(fileReader, &data)
+	if err != nil {
+		Log.Errorf("Cannot unmarshal user file. Reason %s", err)
+		return
+	}
+
+	for _, user := range data.Users {
+		err = DB.NewUser(user)
+		if err != nil {
+			Log.Errorf("Cannot add new user. Reason %s", err)
+		}
+	}
+}
+
+func loadLocations(file *zip.File) {
+	fileReader, err := file.Open()
+	if err != nil {
+		Log.Errorf("Cannot open file %s. Reason %s", file.Name, err)
+		return
+	}
+	defer fileReader.Close()
+
+	data := JsonFileLocations{}
+	err = easyjson.UnmarshalFromReader(fileReader, &data)
+	if err != nil {
+		Log.Errorf("Cannot unmarshal location file. Reason %s", err)
+		return
+	}
+
+	for _, loc := range data.Locations {
+		err = DB.NewLocation(loc)
+		if err != nil {
+			Log.Errorf("Cannot add new location. Reason %s", err)
+		}
+	}
+}
+
+func loadVisits(file *zip.File) {
+	fileReader, err := file.Open()
+	if err != nil {
+		Log.Errorf("Cannot open file %s. Reason %s", file.Name, err)
+		return
+	}
+	defer fileReader.Close()
+
+	data := JsonFileVisits{}
+	err = easyjson.UnmarshalFromReader(fileReader, &data)
+	if err != nil {
+		Log.Errorf("Cannot unmarshal visit file. Reason %s", err)
+		return
+	}
+
+	for _, visit := range data.Visits {
+		err = DB.NewVisit(visit)
+		if err != nil {
+			Log.Errorf("Cannot add new visit. Reason %s", err)
 		}
 	}
 }
@@ -98,17 +176,22 @@ func load() error {
 	}
 
 	for _, file := range reader.File {
-		if strings.HasPrefix(file.Name, "locations") || strings.HasPrefix(file.Name, "users") || strings.HasPrefix(file.Name, "visits") {
-			Log.Errorf("Processing file %s", file.Name)
-
-			processFile(file)
-		}
-		if file.Name == "options.txt" {
+		if strings.HasPrefix(file.Name, "users") {
+			//Log.Errorf("Processing file %s", file.Name)
+			loadUsers(file)
+		} else if strings.HasPrefix(file.Name, "locations") {
+			//Log.Errorf("Processing file %s", file.Name)
+			loadLocations(file)
+		} else if strings.HasPrefix(file.Name, "visits") {
+			//Log.Errorf("Processing file %s", file.Name)
+			loadVisits(file)
+		} else if file.Name == "options.txt" {
 			fileReader, err := file.Open()
 			if err != nil {
 				Log.Errorf("Cannot open file %s. Reason %s", file.Name, err)
 				return nil
 			}
+
 			defer fileReader.Close()
 
 			fileData, err := ioutil.ReadAll(fileReader)

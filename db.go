@@ -37,7 +37,7 @@ func (DB *Database) GetUser(id int) (*User, error) {
 
 	user, ok := DB.users[id]
 	if !ok {
-		return &User{Id: id}, NotFound
+		return nil, NotFound
 	}
 
 	return user, nil
@@ -46,7 +46,6 @@ func (DB *Database) GetUser(id int) (*User, error) {
 func (DB *Database) UpdateUser(user *User, id int) error {
 	Log.Infof("Updating user with id %d", id)
 
-	//DB.users.Store(user.Id, user)
 	return nil
 }
 
@@ -65,7 +64,7 @@ func (DB *Database) GetLocation(id int) (*Location, error) {
 
 	loc, ok := DB.locations[id]
 	if !ok {
-		return &Location{Id: id}, NotFound
+		return nil, NotFound
 	}
 
 	return loc, nil
@@ -74,7 +73,6 @@ func (DB *Database) GetLocation(id int) (*Location, error) {
 func (DB *Database) UpdateLocation(loc *Location, id int) error {
 	Log.Infof("Updating location with id %d", id)
 
-	//DB.locations.Store(loc.Id, loc)
 	return nil
 }
 
@@ -84,9 +82,8 @@ func (DB *Database) NewVisit(visit *Visit) error {
 	DB.visits[visit.Id] = visit
 	usr, err := DB.GetUser(visit.User)
 	if err == NotFound {
-		usr.Visits = NewArray()
+		usr = NewUser(visit.User)
 		DB.users[usr.Id] = usr
-		//DB.users.Store(usr.Id, usr)
 	} else if err != nil {
 		return fmt.Errorf("Cannot get user %d. Reason %s", visit.User, err)
 	}
@@ -94,8 +91,7 @@ func (DB *Database) NewVisit(visit *Visit) error {
 
 	loc, err := DB.GetLocation(visit.Location)
 	if err == NotFound {
-		loc.Visits = NewArray()
-		//DB.locations.Store(loc.Id, loc)
+		loc = NewLocation(visit.Location)
 		DB.locations[loc.Id] = loc
 	} else if err != nil {
 		return fmt.Errorf("Cannot get location %d. Reason %s", visit.Location, err)
@@ -109,7 +105,7 @@ func (DB *Database) GetVisit(id int) (*Visit, error) {
 
 	v, ok := DB.visits[id]
 	if !ok {
-		return &Visit{Id: id}, NotFound
+		return nil, NotFound
 	}
 	return v, nil
 }
@@ -267,29 +263,28 @@ func (DB *Database) GetAverage(id int, filters *fasthttp.Args) (float32, error) 
 		return 0.0, CannotParse
 	}
 
-	/*
-		for _, visit := range DB.visits {
-			if visit.Location == id {
-				if visit.VisitedAt > fromDate && visit.VisitedAt < toDate {
-					user, err := DB.GetUser(visit.User)
-					if err == nil {
-						Log.Warnf("Found user for that visit %#v", user)
-						if time.Unix(int64(user.Birthdate), 0).AddDate(fromAge, 0, 0).Before(ts) {
-							Log.Warnf("Before ok %v %v", time.Unix(int64(user.Birthdate), 0).AddDate(fromAge, 0, 0), ts)
-							if toAge == -1 || time.Unix(int64(user.Birthdate), 0).AddDate(toAge, 0, 0).After(ts) {
-								Log.Warnf("Ater ok")
-								if gender == "" || user.Gender == gender {
-									Log.Infof("Adding %f", float32(visit.Mark))
-									marks += float32(visit.Mark)
-									count += 1
-									Log.Infof("Marks %f %d", marks, count)
-								}
+	/*for _, visit := range DB.visits {
+		if visit.Location == id {
+			if visit.VisitedAt > fromDate && visit.VisitedAt < toDate {
+				user, err := DB.GetUser(visit.User)
+				if err == nil {
+					Log.Warnf("Found user for that visit %#v", user)
+					if time.Unix(int64(user.Birthdate), 0).AddDate(fromAge, 0, 0).Before(ts) {
+						Log.Warnf("Before ok %v %v", time.Unix(int64(user.Birthdate), 0).AddDate(fromAge, 0, 0), ts)
+						if toAge == -1 || time.Unix(int64(user.Birthdate), 0).AddDate(toAge, 0, 0).After(ts) {
+							Log.Warnf("Ater ok")
+							if gender == "" || user.Gender == gender {
+								Log.Infof("Adding %f", float32(visit.Mark))
+								marks += float32(visit.Mark)
+								count += 1
+								Log.Infof("Marks %f %d", marks, count)
 							}
 						}
 					}
 				}
 			}
-		}*/
+		}
+	}*/
 
 	loc.Visits.ForEach(func(id int) bool {
 		visit, err := DB.GetVisit(id)

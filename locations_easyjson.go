@@ -4,6 +4,7 @@ package main
 
 import (
 	json "encoding/json"
+	"errors"
 	easyjson "github.com/mailru/easyjson"
 	jlexer "github.com/mailru/easyjson/jlexer"
 	jwriter "github.com/mailru/easyjson/jwriter"
@@ -98,9 +99,8 @@ func easyjsonE9bf8de2DecodeHighloadcup1(in *jlexer.Lexer, out *Location) {
 		key := in.UnsafeString()
 		in.WantColon()
 		if in.IsNull() {
-			in.Skip()
-			in.WantComma()
-			continue
+			in.AddError(errors.New("Field is null"))
+			return
 		}
 		switch key {
 		case "id":

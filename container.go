@@ -32,6 +32,8 @@ func NewArray() Array {
 	return Array{}
 }
 
+//1000046*52 + 763407*44 + 10000460*20
+
 /*
 type Array struct {
 	Lst *list.List

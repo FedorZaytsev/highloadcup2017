@@ -48,14 +48,14 @@ func init() {
 	ts = time.Now()
 }
 
-func writeAnswer(ctx *fasthttp.RequestCtx, code int, body string) {
+func writeAnswer(ctx *fasthttp.RequestCtx, code int, body []byte) {
 	ctx.SetContentType("application/json; charset=UTF-8")
 	ctx.SetStatusCode(code)
-	fmt.Fprintf(ctx, body)
+	ctx.SetBody(body)
 }
 
-func generateError(data string) string {
-	return fmt.Sprintf("{\"error\": \"%s\"}", data)
+func generateError(data string) []byte {
+	return []byte(fmt.Sprintf("{\"error\": \"%s\"}", data))
 }
 
 func requestHandler(ctx *fasthttp.RequestCtx) {
@@ -87,7 +87,7 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 
 func main() {
 	Log.Infof("Started\n")
-	//defer profile.Start(profile.ProfilePath(".")).Stop()
+	//defer profile.Start(profile.MemProfile, profile.ProfilePath(".")).Stop()
 
 	go loadToServer()
 

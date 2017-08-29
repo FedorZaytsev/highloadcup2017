@@ -15,20 +15,22 @@ type Visit struct {
 	Mark      int `json:"mark"`
 }
 
+func NewVisit(id int) *Visit {
+	return &Visit{
+		Id: id,
+	}
+}
+
+var ANSWER_OK = []byte("{}")
+
 func newVisit(ctx *fasthttp.RequestCtx) {
 	data := ctx.PostBody()
-
-	if strings.Index(string(data), "\": null") != -1 {
-		Log.Infof("null param")
-		writeAnswer(ctx, http.StatusBadRequest, "")
-		return
-	}
 
 	var body Visit
 	err := body.UnmarshalJSON(data)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
-		writeAnswer(ctx, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
+		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
 
@@ -39,14 +41,14 @@ func newVisit(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	writeAnswer(ctx, http.StatusOK, "{}")
+	writeAnswer(ctx, http.StatusOK, ANSWER_OK)
 }
 
 func getVisit(ctx *fasthttp.RequestCtx, id int) {
 	visit, err := DB.GetVisit(id)
 	if err == NotFound {
 		Log.Warnf("Not found")
-		writeAnswer(ctx, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
 	if err != nil {
@@ -62,22 +64,16 @@ func getVisit(ctx *fasthttp.RequestCtx, id int) {
 		return
 	}
 
-	writeAnswer(ctx, http.StatusOK, string(result))
+	writeAnswer(ctx, http.StatusOK, result)
 }
 
 func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 	data := ctx.PostBody()
 
-	if strings.Index(string(data), "\": null") != -1 {
-		Log.Infof("null param")
-		writeAnswer(ctx, http.StatusBadRequest, "")
-		return
-	}
-
 	visit, err := DB.GetVisit(id)
 	if err == NotFound {
 		Log.Infof("Not found")
-		writeAnswer(ctx, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
 	if err != nil {
@@ -92,7 +88,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 	err = visit.UnmarshalJSON(data)
 	if err != nil {
 		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
-		writeAnswer(ctx, http.StatusBadRequest, generateError("Cannot parse JSON in request"))
+		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
 
@@ -101,7 +97,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 		usrOld, err := DB.GetUser(oldUser)
 		if err != nil {
 			Log.Errorf("Cannot get user %d. Reason %s", oldUser, err)
-			writeAnswer(ctx, http.StatusBadRequest, "")
+			writeAnswer(ctx, http.StatusBadRequest, []byte{})
 			return
 		}
 		usrOld.Visits.Remove(visit.Id)
@@ -109,7 +105,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 		usr, err := DB.GetUser(visit.User)
 		if err != nil {
 			Log.Errorf("Cannot get user %d. Reason %s", visit.User, err)
-			writeAnswer(ctx, http.StatusBadRequest, "")
+			writeAnswer(ctx, http.StatusBadRequest, []byte{})
 			return
 		}
 		usr.Visits.Add(visit.Id)
@@ -120,7 +116,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 		locOld, err := DB.GetLocation(oldLocation)
 		if err != nil {
 			Log.Errorf("Cannot get location %d. Reason %s", oldLocation, err)
-			writeAnswer(ctx, http.StatusBadRequest, "")
+			writeAnswer(ctx, http.StatusBadRequest, []byte{})
 			return
 		}
 		locOld.Visits.Remove(visit.Id)
@@ -128,7 +124,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 		loc, err := DB.GetLocation(visit.Location)
 		if err != nil {
 			Log.Errorf("Cannot get location %d. Reason %s", visit.Location, err)
-			writeAnswer(ctx, http.StatusBadRequest, "")
+			writeAnswer(ctx, http.StatusBadRequest, []byte{})
 			return
 		}
 		loc.Visits.Add(visit.Id)
@@ -141,7 +137,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 		return
 	}
 
-	writeAnswer(ctx, http.StatusOK, "{}")
+	writeAnswer(ctx, http.StatusOK, ANSWER_OK)
 }
 
 func processVisit(ctx *fasthttp.RequestCtx) {
@@ -149,7 +145,7 @@ func processVisit(ctx *fasthttp.RequestCtx) {
 	id, err := strconv.Atoi(path[2])
 	if err != nil {
 		Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
-		writeAnswer(ctx, http.StatusNotFound, "")
+		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
 	if string(ctx.Method()) == "GET" {
