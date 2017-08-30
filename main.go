@@ -60,7 +60,7 @@ func generateError(data string) []byte {
 
 func requestHandler(ctx *fasthttp.RequestCtx) {
 	path := ctx.Path()
-	Log.Infof("PATH %s", string(path))
+	//Log.Infof("PATH %s", string(path))
 	switch string(path[:2]) {
 	case "/u":
 		if path[len(path)-1] == 'w' {
@@ -85,13 +85,17 @@ func requestHandler(ctx *fasthttp.RequestCtx) {
 	}
 }
 
+type prof interface {
+	Stop()
+}
+
 func main() {
-	Log.Infof("Started\n")
-	//defer profile.Start(profile.MemProfile, profile.ProfilePath(".")).Stop()
+	//Log.Infof("Started\n")
+	//defer profiler.Stop()
 
 	go loadToServer()
 
-	err := fasthttp.ListenAndServe(":8080", requestHandler)
+	err := fasthttp.ListenAndServe(":80", requestHandler)
 	if err != nil {
 		Log.Errorf("ListAndServe error: %s", err)
 	}

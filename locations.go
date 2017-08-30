@@ -31,17 +31,15 @@ func NewLocation(id int) *Location {
 func newLocation(ctx *fasthttp.RequestCtx) {
 	data := ctx.PostBody()
 
-	body := Location{
-		Visits: NewArray(),
-	}
+	body := NewLocation(0)
 	err := body.UnmarshalJSON(data)
 	if err != nil {
-		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
+		//Log.Warnf("Cannot parse JSON in request. Reason %s", err)
 		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
 
-	err = DB.NewLocation(&body)
+	err = DB.NewLocation(body)
 	if err != nil {
 		Log.Errorf("Cannot set id %d. Reason %s", body.Id, err)
 		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot set id"))
@@ -62,16 +60,16 @@ func toFixed(num float64, precision int) float64 {
 
 func getLocationAvg(ctx *fasthttp.RequestCtx, id int) {
 	filters := ctx.QueryArgs()
-	Log.Infof("Getting avg for location %d with filters %#v", id, filters)
+	//Log.Infof("Getting avg for location %d with filters %#v", id, filters)
 
 	val, err := DB.GetAverage(id, filters)
 	switch err {
 	case NotFound:
-		Log.Infof("Not found")
+		//Log.Infof("Not found")
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	case CannotParse:
-		Log.Infof("Cannot parse")
+		//Log.Infof("Cannot parse")
 		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	case nil:
@@ -99,12 +97,12 @@ func getLocationAvg(ctx *fasthttp.RequestCtx, id int) {
 func getLocation(ctx *fasthttp.RequestCtx, id int) {
 	location, err := DB.GetLocation(id)
 	if err == NotFound {
-		Log.Warnf("Not found")
+		//Log.Warnf("Not found")
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
 	if err != nil {
-		Log.Errorf("Cannot get id %s. Reason %s", id, err)
+		//Log.Errorf("Cannot get id %s. Reason %s", id, err)
 		writeAnswer(ctx, http.StatusInternalServerError, generateError("cannot get id"))
 		return
 	}
@@ -124,7 +122,7 @@ func updateLocation(ctx *fasthttp.RequestCtx, id int) {
 
 	loc, err := DB.GetLocation(id)
 	if err == NotFound {
-		Log.Infof("Not found")
+		//Log.Infof("Not found")
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
@@ -136,7 +134,7 @@ func updateLocation(ctx *fasthttp.RequestCtx, id int) {
 
 	err = loc.UnmarshalJSON(data)
 	if err != nil {
-		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
+		//Log.Warnf("Cannot parse JSON in request. Reason %s", err)
 		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
@@ -155,7 +153,7 @@ func processLocation(ctx *fasthttp.RequestCtx) {
 	path := strings.Split(string(ctx.Path()), "/")
 	id, err := strconv.Atoi(path[2])
 	if err != nil {
-		Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
+		//Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}

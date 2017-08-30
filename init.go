@@ -4,7 +4,9 @@ import (
 	"archive/zip"
 	"fmt"
 	easyjson "github.com/mailru/easyjson"
+	//"github.com/pkg/profile"
 	"io/ioutil"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -177,13 +179,13 @@ func load() error {
 
 	for _, file := range reader.File {
 		if strings.HasPrefix(file.Name, "users") {
-			//Log.Errorf("Processing file %s", file.Name)
+			Log.Errorf("Processing file %s", file.Name)
 			loadUsers(file)
 		} else if strings.HasPrefix(file.Name, "locations") {
-			//Log.Errorf("Processing file %s", file.Name)
+			Log.Errorf("Processing file %s", file.Name)
 			loadLocations(file)
 		} else if strings.HasPrefix(file.Name, "visits") {
-			//Log.Errorf("Processing file %s", file.Name)
+			Log.Errorf("Processing file %s", file.Name)
 			loadVisits(file)
 		} else if file.Name == "options.txt" {
 			fileReader, err := file.Open()
@@ -200,7 +202,7 @@ func load() error {
 				return nil
 			}
 
-			Log.Errorf("options.txt: %s", string(fileData))
+			//Log.Errorf("options.txt: %s", string(fileData))
 			tsUnix, err := strconv.Atoi(strings.Split(string(fileData), "\n")[0])
 			if err != nil {
 				ts = time.Now()
@@ -208,19 +210,24 @@ func load() error {
 			} else {
 				ts = time.Unix(int64(tsUnix), 0)
 			}
-			Log.Infof("ts is %s", ts)
+			//Log.Infof("ts is %s", ts)
 
 		}
 	}
 	return nil
 }
 
+//var profiler prof
+
 func loadToServer() {
-	Log.Infof("Load data to server")
+	//Log.Infof("Load data to server")
 
 	err := load()
 	if err != nil {
 		Log.Errorf("Cannot load startup data. Reason %s", err)
 	}
 	Log.Errorln("ALL LOADED FASTHTTP")
+
+	debug.SetGCPercent(-1)
+	//profiler = profile.Start(profile.ProfilePath("."))
 }

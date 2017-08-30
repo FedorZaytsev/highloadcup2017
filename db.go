@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"math"
-	"net/url"
 	"sort"
 	"strconv"
 	"time"
@@ -23,7 +21,7 @@ type Database struct {
 }
 
 func (DB *Database) NewUser(user *User) error {
-	Log.Infof("Inserting user with id %d", user.Id)
+	//Log.Infof("Inserting user with id %d", user.Id)
 	usr, err := DB.GetUser(user.Id)
 	if err == nil {
 		user.Visits = usr.Visits
@@ -33,7 +31,7 @@ func (DB *Database) NewUser(user *User) error {
 }
 
 func (DB *Database) GetUser(id int) (*User, error) {
-	Log.Infof("Getting user with id %d", id)
+	//Log.Infof("Getting user with id %d", id)
 
 	user, ok := DB.users[id]
 	if !ok {
@@ -44,13 +42,13 @@ func (DB *Database) GetUser(id int) (*User, error) {
 }
 
 func (DB *Database) UpdateUser(user *User, id int) error {
-	Log.Infof("Updating user with id %d", id)
+	//Log.Infof("Updating user with id %d", id)
 
 	return nil
 }
 
 func (DB *Database) NewLocation(loc *Location) error {
-	Log.Infof("Inserting location with id %d", loc.Id)
+	//Log.Infof("Inserting location with id %d", loc.Id)
 	location, err := DB.GetLocation(loc.Id)
 	if err == nil {
 		loc.Visits = location.Visits
@@ -60,7 +58,7 @@ func (DB *Database) NewLocation(loc *Location) error {
 }
 
 func (DB *Database) GetLocation(id int) (*Location, error) {
-	Log.Infof("Getting location with id %d", id)
+	//Log.Infof("Getting location with id %d", id)
 
 	loc, ok := DB.locations[id]
 	if !ok {
@@ -71,13 +69,13 @@ func (DB *Database) GetLocation(id int) (*Location, error) {
 }
 
 func (DB *Database) UpdateLocation(loc *Location, id int) error {
-	Log.Infof("Updating location with id %d", id)
+	//Log.Infof("Updating location with id %d", id)
 
 	return nil
 }
 
 func (DB *Database) NewVisit(visit *Visit) error {
-	Log.Infof("Inserting visit with id %d", visit.Id)
+	//Log.Infof("Inserting visit with id %d", visit.Id)
 
 	DB.visits[visit.Id] = visit
 	usr, err := DB.GetUser(visit.User)
@@ -101,7 +99,7 @@ func (DB *Database) NewVisit(visit *Visit) error {
 }
 
 func (DB *Database) GetVisit(id int) (*Visit, error) {
-	Log.Infof("Getting visit with id %d", id)
+	//Log.Infof("Getting visit with id %d", id)
 
 	v, ok := DB.visits[id]
 	if !ok {
@@ -111,7 +109,7 @@ func (DB *Database) GetVisit(id int) (*Visit, error) {
 }
 
 func (DB *Database) UpdateVisit(visit *Visit, id int) error {
-	Log.Infof("Updating visit with id %d", id)
+	//Log.Infof("Updating visit with id %d", id)
 
 	//DB.visits.Store(visit.Id, visit)
 	return nil
@@ -129,7 +127,7 @@ func (DB *Database) GetVisitsFilter(id int, filters *fasthttp.Args) ([]UserVisit
 	fromDateStr := string(filters.Peek("fromDate"))
 	fromDate, err := strconv.Atoi(fromDateStr)
 	if err != nil {
-		if fromDateStr != "" {
+		if len(fromDateStr) != 0 {
 			return result, CannotParse
 		}
 		fromDate = math.MinInt32
@@ -146,13 +144,11 @@ func (DB *Database) GetVisitsFilter(id int, filters *fasthttp.Args) ([]UserVisit
 
 	country := string(filters.Peek("country"))
 
-	toDistanceStr := string(filters.Peek("toDistance"))
-	toDistance, err := strconv.Atoi(toDistanceStr)
-	if err != nil {
-		if toDistanceStr != "" {
-			return result, CannotParse
-		}
+	toDistance, err := filters.GetUint("toDistance")
+	if err == fasthttp.ErrNoArgValue {
 		toDistance = math.MaxInt32
+	} else if err != nil {
+		return result, CannotParse
 	}
 
 	usr.Visits.ForEach(func(id int) bool {
@@ -240,22 +236,18 @@ func (DB *Database) GetAverage(id int, filters *fasthttp.Args) (float32, error) 
 		toDate = math.MaxInt32
 	}
 
-	fromAgeStr := string(filters.Peek("fromAge"))
-	fromAge, err := strconv.Atoi(fromAgeStr)
-	if err != nil {
-		if fromAgeStr != "" {
-			return 0.0, CannotParse
-		}
+	fromAge, err := filters.GetUint("fromAge")
+	if err == fasthttp.ErrNoArgValue {
 		fromAge = 0
+	} else if err != nil {
+		return 0.0, CannotParse
 	}
 
-	toAgeStr := string(filters.Peek("toAge"))
-	toAge, err := strconv.Atoi(toAgeStr)
-	if err != nil {
-		if toAgeStr != "" {
-			return 0.0, CannotParse
-		}
+	toAge, err := filters.GetUint("toAge")
+	if err == fasthttp.ErrNoArgValue {
 		toAge = -1
+	} else if err != nil {
+		return 0.0, CannotParse
 	}
 
 	gender := string(filters.Peek("gender"))
@@ -291,16 +283,16 @@ func (DB *Database) GetAverage(id int, filters *fasthttp.Args) (float32, error) 
 		if err == nil && visit.VisitedAt > fromDate && visit.VisitedAt < toDate {
 			user, err := DB.GetUser(visit.User)
 			if err == nil {
-				Log.Warnf("Found user for that visit %#v", user)
+				//Log.Warnf("Found user for that visit %#v", user)
 				if time.Unix(int64(user.Birthdate), 0).AddDate(fromAge, 0, 0).Before(ts) {
-					Log.Warnf("Before ok %v %v", time.Unix(int64(user.Birthdate), 0).AddDate(fromAge, 0, 0), ts)
+					//Log.Warnf("Before ok %v %v", time.Unix(int64(user.Birthdate), 0).AddDate(fromAge, 0, 0), ts)
 					if toAge == -1 || time.Unix(int64(user.Birthdate), 0).AddDate(toAge, 0, 0).After(ts) {
-						Log.Warnf("Ater ok")
+						//Log.Warnf("Ater ok")
 						if gender == "" || user.Gender == gender {
-							Log.Infof("Adding %f", float32(visit.Mark))
+							//Log.Infof("Adding %f", float32(visit.Mark))
 							marks += float32(visit.Mark)
 							count += 1
-							Log.Infof("Marks %f %d", marks, count)
+							//Log.Infof("Marks %f %d", marks, count)
 						}
 					}
 				}
@@ -339,112 +331,6 @@ func (DB *Database) GetAverage(id int, filters *fasthttp.Args) (float32, error) 
 	}
 
 	return marks / float32(count), nil
-}
-
-func generateWhereClasure(filters url.Values) (string, error) {
-	var buf bytes.Buffer
-	if filters.Get("fromDate") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		if _, err := strconv.Atoi(filters.Get("fromDate")); err != nil {
-			return "", fmt.Errorf("Cannot convert fromDate %s", filters.Get("fromDate"))
-		}
-		buf.WriteString("visitedAt > " + filters.Get("fromDate"))
-	}
-	if filters.Get("toDate") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		if _, err := strconv.Atoi(filters.Get("toDate")); err != nil {
-			return "", fmt.Errorf("Cannot convert toDate %s", filters.Get("toDate"))
-		}
-		buf.WriteString("visitedAt < " + filters.Get("toDate"))
-	}
-	if filters.Get("country") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		buf.WriteString("country = \"" + filters.Get("country") + "\"")
-	}
-	if filters.Get("toDistance") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		if _, err := strconv.Atoi(filters.Get("toDistance")); err != nil {
-			return "", fmt.Errorf("Cannot convert toDistance %s", filters.Get("toDistance"))
-		}
-		buf.WriteString("distance < " + filters.Get("toDistance"))
-	}
-
-	if buf.Len() > 0 {
-		return "WHERE " + buf.String(), nil
-	}
-	return "", nil
-}
-
-func generateWhereClasureAvgInner(filters url.Values) (string, error) {
-	var buf bytes.Buffer
-	if filters.Get("fromDate") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		if _, err := strconv.Atoi(filters.Get("fromDate")); err != nil {
-			return "", fmt.Errorf("Cannot convert fromDate %s", filters.Get("fromDate"))
-		}
-		buf.WriteString("visitedAt > " + filters.Get("fromDate"))
-	}
-	if filters.Get("toDate") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		if _, err := strconv.Atoi(filters.Get("toDate")); err != nil {
-			return "", fmt.Errorf("Cannot convert toDate %s", filters.Get("toDate"))
-		}
-		buf.WriteString("visitedAt < " + filters.Get("toDate"))
-	}
-
-	if buf.Len() > 0 {
-		return "WHERE " + buf.String(), nil
-	}
-	return "", nil
-}
-
-func generateWhereClasureAvgOutter(filters url.Values) (string, error) {
-	var buf bytes.Buffer
-	if filters.Get("fromAge") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		fromAge, err := strconv.Atoi(filters.Get("fromAge"))
-		if err != nil {
-			return "", fmt.Errorf("Cannot parse fromAge. %s Reason %s", filters.Get("fromAge"), err)
-		}
-		fromDateAge := time.Unix(0, 0).AddDate(fromAge, 0, 0).Unix()
-		buf.WriteString("birthdate + " + strconv.FormatInt(fromDateAge, 10) + " < " + strconv.FormatInt(time.Now().Unix(), 10))
-	}
-	if filters.Get("toAge") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		toAge, err := strconv.Atoi(filters.Get("toAge"))
-		if err != nil {
-			return "", fmt.Errorf("Cannot parse toAge. %s Reason %s", filters.Get("toAge"), err)
-		}
-		toDateAge := time.Unix(0, 0).AddDate(toAge, 0, 0).Unix()
-		buf.WriteString("birthdate + " + strconv.FormatInt(toDateAge, 10) + " > " + strconv.FormatInt(time.Now().Unix(), 10))
-	}
-	if filters.Get("gender") != "" {
-		if buf.Len() != 0 {
-			buf.WriteString(" and ")
-		}
-		buf.WriteString("gender = \"" + filters.Get("gender") + "\"")
-	}
-
-	if buf.Len() > 0 {
-		return "WHERE " + buf.String(), nil
-	}
-	return "", nil
 }
 
 func DatabaseInit() (*Database, error) {

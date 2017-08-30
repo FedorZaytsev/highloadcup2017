@@ -26,15 +26,15 @@ var ANSWER_OK = []byte("{}")
 func newVisit(ctx *fasthttp.RequestCtx) {
 	data := ctx.PostBody()
 
-	var body Visit
+	body := NewVisit(0)
 	err := body.UnmarshalJSON(data)
 	if err != nil {
-		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
+		//Log.Warnf("Cannot parse JSON in request. Reason %s", err)
 		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
 
-	err = DB.NewVisit(&body)
+	err = DB.NewVisit(body)
 	if err != nil {
 		Log.Errorf("Cannot set id %d. Reason %s", body.Id, err)
 		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot set id"))
@@ -47,7 +47,7 @@ func newVisit(ctx *fasthttp.RequestCtx) {
 func getVisit(ctx *fasthttp.RequestCtx, id int) {
 	visit, err := DB.GetVisit(id)
 	if err == NotFound {
-		Log.Warnf("Not found")
+		//Log.Warnf("Not found")
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
@@ -72,7 +72,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 
 	visit, err := DB.GetVisit(id)
 	if err == NotFound {
-		Log.Infof("Not found")
+		//Log.Infof("Not found")
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
@@ -87,7 +87,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 
 	err = visit.UnmarshalJSON(data)
 	if err != nil {
-		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
+		//Log.Warnf("Cannot parse JSON in request. Reason %s", err)
 		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
@@ -96,7 +96,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 	if visit.User != oldUser {
 		usrOld, err := DB.GetUser(oldUser)
 		if err != nil {
-			Log.Errorf("Cannot get user %d. Reason %s", oldUser, err)
+			//Log.Errorf("Cannot get user %d. Reason %s", oldUser, err)
 			writeAnswer(ctx, http.StatusBadRequest, []byte{})
 			return
 		}
@@ -104,7 +104,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 
 		usr, err := DB.GetUser(visit.User)
 		if err != nil {
-			Log.Errorf("Cannot get user %d. Reason %s", visit.User, err)
+			//Log.Errorf("Cannot get user %d. Reason %s", visit.User, err)
 			writeAnswer(ctx, http.StatusBadRequest, []byte{})
 			return
 		}
@@ -115,7 +115,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 	if visit.Location != oldLocation {
 		locOld, err := DB.GetLocation(oldLocation)
 		if err != nil {
-			Log.Errorf("Cannot get location %d. Reason %s", oldLocation, err)
+			//Log.Errorf("Cannot get location %d. Reason %s", oldLocation, err)
 			writeAnswer(ctx, http.StatusBadRequest, []byte{})
 			return
 		}
@@ -123,7 +123,7 @@ func updateVisit(ctx *fasthttp.RequestCtx, id int) {
 
 		loc, err := DB.GetLocation(visit.Location)
 		if err != nil {
-			Log.Errorf("Cannot get location %d. Reason %s", visit.Location, err)
+			//Log.Errorf("Cannot get location %d. Reason %s", visit.Location, err)
 			writeAnswer(ctx, http.StatusBadRequest, []byte{})
 			return
 		}
@@ -144,7 +144,7 @@ func processVisit(ctx *fasthttp.RequestCtx) {
 	path := strings.Split(string(ctx.Path()), "/")
 	id, err := strconv.Atoi(path[2])
 	if err != nil {
-		Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
+		//Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}

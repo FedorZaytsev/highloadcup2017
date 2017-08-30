@@ -29,7 +29,9 @@ func (a *Array) Remove(el int) {
 }
 
 func NewArray() Array {
-	return Array{}
+	return Array{
+		Lst: make([]int, 8),
+	}
 }
 
 //1000046*52 + 763407*44 + 10000460*20

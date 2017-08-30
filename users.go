@@ -53,18 +53,16 @@ func NewUser(id int) *User {
 func newUser(ctx *fasthttp.RequestCtx) {
 	data := ctx.PostBody()
 
-	body := User{
-		Visits: NewArray(),
-	}
+	body := NewUser(0)
 	err := body.UnmarshalJSON(data)
 	if err != nil {
-		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
+		//Log.Warnf("Cannot parse JSON in request. Reason %s", err)
 		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
-	Log.Infof("Visits after %p", body.Visits)
+	//Log.Infof("Visits after %p", body.Visits)
 
-	err = DB.NewUser(&body)
+	err = DB.NewUser(body)
 	if err != nil {
 		Log.Errorf("Cannot set id %d. Reason %s", body.Id, err)
 		writeAnswer(ctx, http.StatusInternalServerError, generateError("Cannot set id"))
@@ -76,16 +74,16 @@ func newUser(ctx *fasthttp.RequestCtx) {
 
 func getUserVisits(ctx *fasthttp.RequestCtx, id int) {
 	filters := ctx.QueryArgs()
-	Log.Infof("Getting user %s visits with filters %#v", id, filters)
+	//Log.Infof("Getting user %s visits with filters %#v", id, filters)
 
 	vals, err := DB.GetVisitsFilter(id, filters)
 	switch err {
 	case NotFound:
-		Log.Infof("Not found")
+		//Log.Infof("Not found")
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	case CannotParse:
-		Log.Infof("Cannot parse")
+		//Log.Infof("Cannot parse")
 		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	case nil:
@@ -113,7 +111,7 @@ func getUserVisits(ctx *fasthttp.RequestCtx, id int) {
 func getUser(ctx *fasthttp.RequestCtx, id int) {
 	result, err := DB.GetUser(id)
 	if err == NotFound {
-		Log.Infof("Not found")
+		//Log.Infof("Not found")
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
@@ -138,7 +136,7 @@ func updateUser(ctx *fasthttp.RequestCtx, id int) {
 
 	user, err := DB.GetUser(id)
 	if err == NotFound {
-		Log.Infof("Not found")
+		//Log.Infof("Not found")
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
@@ -150,7 +148,7 @@ func updateUser(ctx *fasthttp.RequestCtx, id int) {
 
 	err = user.UnmarshalJSON(data)
 	if err != nil {
-		Log.Warnf("Cannot parse JSON in request. Reason %s", err)
+		//Log.Warnf("Cannot parse JSON in request. Reason %s", err)
 		writeAnswer(ctx, http.StatusBadRequest, []byte{})
 		return
 	}
@@ -169,7 +167,7 @@ func processUser(ctx *fasthttp.RequestCtx) {
 	path := strings.Split(string(ctx.Path()), "/")
 	id, err := strconv.Atoi(path[2])
 	if err != nil {
-		Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
+		//Log.Infof("Cannot parse id %s. Reason %s", path[2], err)
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
