@@ -13,11 +13,65 @@ import (
 
 var NotFound = fmt.Errorf("Not found")
 var CannotParse = fmt.Errorf("Cannot parse")
+var USERS_ARRAY = 10000000
+var LOCATIONS_ARRAY = 1000000
+var VISITS_ARRAY = 100000000
 
 type Database struct {
-	users     map[int]*User
-	locations map[int]*Location
-	visits    map[int]*Visit
+	usersArray     []*User
+	locationsArray []*Location
+	visitsArray    []*Visit
+	usersMap       map[int]*User
+	locationsMap   map[int]*Location
+	visitsMap      map[int]*Visit
+}
+
+func (DB *Database) setUser(user *User) {
+	if user.Id >= USERS_ARRAY {
+		DB.usersMap[user.Id] = user
+	} else {
+		DB.usersArray[user.Id] = user
+	}
+}
+
+func (DB *Database) getUser(id int) *User {
+	if id >= USERS_ARRAY {
+		return DB.usersMap[id]
+	} else {
+		return DB.usersArray[id]
+	}
+}
+
+func (DB *Database) setLocation(loc *Location) {
+	if loc.Id >= LOCATIONS_ARRAY {
+		DB.locationsMap[loc.Id] = loc
+	} else {
+		DB.locationsArray[loc.Id] = loc
+	}
+}
+
+func (DB *Database) getLocation(id int) *Location {
+	if id >= LOCATIONS_ARRAY {
+		return DB.locationsMap[id]
+	} else {
+		return DB.locationsArray[id]
+	}
+}
+
+func (DB *Database) setVisit(visit *Visit) {
+	if visit.Id >= VISITS_ARRAY {
+		DB.visitsMap[visit.Id] = visit
+	} else {
+		DB.visitsArray[visit.Id] = visit
+	}
+}
+
+func (DB *Database) getVisit(id int) *Visit {
+	if id >= VISITS_ARRAY {
+		return DB.visitsMap[id]
+	} else {
+		return DB.visitsArray[id]
+	}
 }
 
 func (DB *Database) NewUser(user *User) error {
@@ -26,15 +80,20 @@ func (DB *Database) NewUser(user *User) error {
 	if err == nil {
 		user.Visits = usr.Visits
 	}
-	DB.users[user.Id] = user
+	DB.setUser(user)
+	//DB.users[user.Id] = user
 	return nil
 }
 
 func (DB *Database) GetUser(id int) (*User, error) {
 	//Log.Infof("Getting user with id %d", id)
 
-	user, ok := DB.users[id]
+	/*user, ok := DB.users[id]
 	if !ok {
+		return nil, NotFound
+	}*/
+	user := DB.getUser(id)
+	if user == nil {
 		return nil, NotFound
 	}
 
@@ -53,15 +112,20 @@ func (DB *Database) NewLocation(loc *Location) error {
 	if err == nil {
 		loc.Visits = location.Visits
 	}
-	DB.locations[loc.Id] = loc
+	DB.setLocation(loc)
+	//DB.locations[loc.Id] = loc
 	return nil
 }
 
 func (DB *Database) GetLocation(id int) (*Location, error) {
 	//Log.Infof("Getting location with id %d", id)
 
-	loc, ok := DB.locations[id]
+	/*loc, ok := DB.locations[id]
 	if !ok {
+		return nil, NotFound
+	}*/
+	loc := DB.getLocation(id)
+	if loc == nil {
 		return nil, NotFound
 	}
 
@@ -77,11 +141,14 @@ func (DB *Database) UpdateLocation(loc *Location, id int) error {
 func (DB *Database) NewVisit(visit *Visit) error {
 	//Log.Infof("Inserting visit with id %d", visit.Id)
 
-	DB.visits[visit.Id] = visit
+	//DB.visits[visit.Id] = visit
+	DB.setVisit(visit)
+
 	usr, err := DB.GetUser(visit.User)
 	if err == NotFound {
 		usr = NewUser(visit.User)
-		DB.users[usr.Id] = usr
+		DB.setUser(usr)
+		//DB.users[usr.Id] = usr
 	} else if err != nil {
 		return fmt.Errorf("Cannot get user %d. Reason %s", visit.User, err)
 	}
@@ -90,7 +157,8 @@ func (DB *Database) NewVisit(visit *Visit) error {
 	loc, err := DB.GetLocation(visit.Location)
 	if err == NotFound {
 		loc = NewLocation(visit.Location)
-		DB.locations[loc.Id] = loc
+		DB.setLocation(loc)
+		//DB.locations[loc.Id] = loc
 	} else if err != nil {
 		return fmt.Errorf("Cannot get location %d. Reason %s", visit.Location, err)
 	}
@@ -101,10 +169,15 @@ func (DB *Database) NewVisit(visit *Visit) error {
 func (DB *Database) GetVisit(id int) (*Visit, error) {
 	//Log.Infof("Getting visit with id %d", id)
 
-	v, ok := DB.visits[id]
+	/*v, ok := DB.visits[id]
 	if !ok {
 		return nil, NotFound
+	}*/
+	v := DB.getVisit(id)
+	if v == nil {
+		return nil, NotFound
 	}
+
 	return v, nil
 }
 
@@ -335,9 +408,12 @@ func (DB *Database) GetAverage(id int, filters *fasthttp.Args) (float32, error) 
 
 func DatabaseInit() (*Database, error) {
 	db := Database{
-		users:     make(map[int]*User),
-		locations: make(map[int]*Location),
-		visits:    make(map[int]*Visit),
+		usersMap:       make(map[int]*User),
+		locationsMap:   make(map[int]*Location),
+		visitsMap:      make(map[int]*Visit),
+		usersArray:     make([]*User, USERS_ARRAY),
+		locationsArray: make([]*Location, LOCATIONS_ARRAY),
+		visitsArray:    make([]*Visit, VISITS_ARRAY),
 	}
 	return &db, nil
 }

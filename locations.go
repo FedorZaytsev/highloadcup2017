@@ -157,7 +157,7 @@ func processLocation(ctx *fasthttp.RequestCtx) {
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
-	if path[len(path)-1] == "avg" {
+	if len(path) == 4 {
 		getLocationAvg(ctx, id)
 		return
 	}

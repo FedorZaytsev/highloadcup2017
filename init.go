@@ -6,6 +6,7 @@ import (
 	easyjson "github.com/mailru/easyjson"
 	//"github.com/pkg/profile"
 	"io/ioutil"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -179,13 +180,13 @@ func load() error {
 
 	for _, file := range reader.File {
 		if strings.HasPrefix(file.Name, "users") {
-			Log.Errorf("Processing file %s", file.Name)
+			//Log.Errorf("Processing file %s", file.Name)
 			loadUsers(file)
 		} else if strings.HasPrefix(file.Name, "locations") {
-			Log.Errorf("Processing file %s", file.Name)
+			//Log.Errorf("Processing file %s", file.Name)
 			loadLocations(file)
 		} else if strings.HasPrefix(file.Name, "visits") {
-			Log.Errorf("Processing file %s", file.Name)
+			//Log.Errorf("Processing file %s", file.Name)
 			loadVisits(file)
 		} else if file.Name == "options.txt" {
 			fileReader, err := file.Open()
@@ -228,6 +229,7 @@ func loadToServer() {
 	}
 	Log.Errorln("ALL LOADED FASTHTTP")
 
+	runtime.GC()
 	debug.SetGCPercent(-1)
 	//profiler = profile.Start(profile.ProfilePath("."))
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -60,21 +61,20 @@ func generateError(data string) []byte {
 
 func requestHandler(ctx *fasthttp.RequestCtx) {
 	path := ctx.Path()
-	//Log.Infof("PATH %s", string(path))
-	switch string(path[:2]) {
-	case "/u":
+	switch path[1] {
+	case 'u':
 		if path[len(path)-1] == 'w' {
 			newUser(ctx)
 		} else {
 			processUser(ctx)
 		}
-	case "/l":
+	case 'l':
 		if path[len(path)-1] == 'w' {
 			newLocation(ctx)
 		} else {
 			processLocation(ctx)
 		}
-	case "/v":
+	case 'v':
 		if path[len(path)-1] == 'w' {
 			newVisit(ctx)
 		} else {
@@ -92,6 +92,7 @@ type prof interface {
 func main() {
 	//Log.Infof("Started\n")
 	//defer profiler.Stop()
+	debug.SetGCPercent(50)
 
 	go loadToServer()
 

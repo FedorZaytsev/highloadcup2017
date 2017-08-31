@@ -171,7 +171,7 @@ func processUser(ctx *fasthttp.RequestCtx) {
 		writeAnswer(ctx, http.StatusNotFound, []byte{})
 		return
 	}
-	if path[len(path)-1] == "visits" {
+	if len(path) == 4 {
 		getUserVisits(ctx, id)
 		return
 	}
